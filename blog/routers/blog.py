@@ -10,6 +10,7 @@ from blog import schemas
 from ..database import get_db
 from ..repository import blog
 from ..oauth2 import get_current_user
+from requests_html import HTMLSession
 
 
 router = APIRouter(
@@ -40,3 +41,24 @@ def update_blog(id, request: schemas.Blog, db: Session = Depends(get_db)):
 @router.get("/get_blog/{id}", status_code = 200, response_model = schemas.ShowBlog)
 def get_single_blog(id, response: Response,  db: Session = Depends(get_db)):
     return blog.get_single_post(id, response, db)
+
+@router.get("/get_scrapy/{query}", status_code=200)
+def get_scrapy(query):
+    url = f"https://quotes.toscrape.com/tag/{query}"
+
+    session = HTMLSession()
+    response = session.get(url)
+
+    qlist = []
+
+    quotes = response.html.find("div.quote")
+
+    for q in quotes:
+        item = {
+            'text' : q.find('span.text', first=True).text.strip(),
+            'author' : q.find('small.author', first=True).text.strip(),
+        }
+
+        qlist.append(item)
+    
+    return qlist
